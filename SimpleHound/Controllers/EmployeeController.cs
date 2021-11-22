@@ -13,6 +13,13 @@ namespace SimpleHound.Controllers
 
     public class EmployeeController : Controller
     {
+        private readonly MenuDBContext _context;
+
+        public EmployeeController(MenuDBContext context)
+        {
+            _context = context;
+        }
+
         public static List<int> TotalCountHelper = new List<int>();
 
         //Customer list is for customer entry only (customer 1, 2, 3...)
@@ -32,13 +39,9 @@ namespace SimpleHound.Controllers
 
         [HttpPost]
         public IActionResult Oasis(string OasisPassword)
-        {
+        { 
 
-
-            using (var db = new MenuDBContext())
-            {
-
-                foreach (var item in db.MenuEmployees)
+                foreach (var item in _context.MenuEmployees)
                 {
                     if (item.Password == OasisPassword.ToUpper())
                     {
@@ -55,9 +58,7 @@ namespace SimpleHound.Controllers
                             return RedirectToAction("KitchenUI", "Employee", new { id = encrypted, gmailUser = encryptedGmail });
                         }
                     }
-                }
-
-            }
+                }          
             ViewData["Error"] = "Incorrect Password";
 
             return View();
@@ -73,16 +74,15 @@ namespace SimpleHound.Controllers
 
             KitchenFulfillmentList.Clear();
 
-            using (var db = new MenuDBContext())
-            {
+           
                 //add all the items in MenuKitchen that have the same UserName to the KitchenFulfillmentList
 
-                var foodSent = from k in db.MenuKitchen
+                var foodSent = from k in _context.MenuKitchen
                                where k.UserName == decodedGmail
                                select k;
 
                 Helper.AddTofillmentList(foodSent, KitchenFulfillmentList);
-            }
+            
 
             return View(KitchenFulfillmentList);
         }
@@ -103,12 +103,10 @@ namespace SimpleHound.Controllers
                     Helper.DeleteById(item, deleteItem, KitchenFulfillmentList);
                 }
 
-                using (var db = new MenuDBContext())
-                {
-                    db.MenuKitchen.RemoveRange(db.MenuKitchen.Where(x => x.Id == deleteItem));
+              
+                    _context.MenuKitchen.RemoveRange(_context.MenuKitchen.Where(x => x.Id == deleteItem));
 
-                    db.SaveChanges();
-                }
+                    _context.SaveChanges();             
 
 
             }
@@ -126,10 +124,9 @@ namespace SimpleHound.Controllers
 
             ViewData["OrderSentMessage"] = OrderSentMessage;
             ViewData["password"] = decodedPassword;
-            using (var db = new MenuDBContext())
-            {
-                var joinQuery = (from a in db.MenuEntry
-                                 join b in db.MenuEmployees
+           
+                var joinQuery = (from a in _context.MenuEntry
+                                 join b in _context.MenuEmployees
                                  on a.UserName equals b.UserName
                                  select new
                                  {
@@ -141,17 +138,11 @@ namespace SimpleHound.Controllers
                                      a.Categories,
                                      a.Items,
                                      a.Prices,
-                                 });
-                foreach (var item in joinQuery)
-                {
-                    if (decodedPassword == item.Password)
-                    {
-                        ViewData["table"] = item.Tables;
-                        ViewData["name"] = item.Name;
-                    }
-                }
+                                 }).Where(x => x.Password == decodedPassword).FirstOrDefault();
 
-            }
+                ViewData["table"] = joinQuery.Tables;
+                ViewData["name"] = joinQuery.Name;
+            
 
             return View();
         }
@@ -166,18 +157,17 @@ namespace SimpleHound.Controllers
 
             if (tableSelected != null)
             {
-                using (var db = new MenuDBContext())
-                {
+               
                     //Updates MenuCustomerOrder Tables is you go back to select different table 
-                    var foodItems = db.MenuCustomerOrder.Where(x => x.Password == decodedPassword);
+                    var foodItems = _context.MenuCustomerOrder.Where(x => x.Password == decodedPassword);
 
                     foreach (var item in foodItems)
                     {
                         item.TableNum = myTable;
                     }
 
-                    db.SaveChanges();
-                }
+                    _context.SaveChanges();
+                
                 //Once selected you will be directed to WaiterCustomerEntry
                 string encrypted = Helper.Encode(decodedPassword);
                 return RedirectToAction("WaiterCustomerEntry", new { id = tableSelected, password = encrypted });
@@ -197,16 +187,15 @@ namespace SimpleHound.Controllers
             //Retrieve Customer count depending on the password in database
 
             CustomerList.Clear();
-            using (var db = new MenuDBContext())
-            {
-                var customerCount = db.CustomerCount.Where(x => x.Password == decodedPassword);
+           
+                var customerCount = _context.CustomerCount.Where(x => x.Password == decodedPassword);
                 foreach (var item in customerCount)
                 {
-                    CustomerList.Add(new CustomerCount() {Password = item.Password, Customer = item.Customer });
+                    CustomerList.Add(new CustomerCount() { Password = item.Password, Customer = item.Customer });
                 }
-            }
+            
 
-                return View(CustomerList);
+            return View(CustomerList);
         }
 
         [HttpPost]
@@ -228,40 +217,38 @@ namespace SimpleHound.Controllers
             if (DeleteItem != null)
             {
                 //deletes customer from database and list
-                using (var db = new MenuDBContext())
-                {
-                    var customerQuery = db.CustomerCount.Where(x => x.Password == decodedPassword);
+              
+                    var customerQuery = _context.CustomerCount.Where(x => x.Password == decodedPassword);
 
-                    if(customerQuery.Count() == 1)
+                    if (customerQuery.Count() == 1)
                     {
                         TotalCountHelper.Clear();
-                        db.CustomerCount.RemoveRange(db.CustomerCount.Where(x => x.Password == decodedPassword));
+                    _context.CustomerCount.RemoveRange(_context.CustomerCount.Where(x => x.Password == decodedPassword));
                     }
                     else
                     {
                         int.TryParse(DeleteItem, out int deleteCustomer);
-                        db.CustomerCount.RemoveRange(db.CustomerCount.Where(x => x.Password == decodedPassword && x.Customer == deleteCustomer));
+                    _context.CustomerCount.RemoveRange(_context.CustomerCount.Where(x => x.Password == decodedPassword && x.Customer == deleteCustomer));
                     }
-                   
 
-                    db.MenuCustomerOrder.RemoveRange(db.MenuCustomerOrder.Where(x => x.Customer == DeleteItem && x.Password == decodedPassword));
-                    db.SaveChanges();
 
-                   
+                _context.MenuCustomerOrder.RemoveRange(_context.MenuCustomerOrder.Where(x => x.Customer == DeleteItem && x.Password == decodedPassword));
+                _context.SaveChanges();
+
+
                     CustomerList.Clear();
-                    var getCustomer = db.CustomerCount.Where(x => x.Password == decodedPassword);
+                    var getCustomer = _context.CustomerCount.Where(x => x.Password == decodedPassword);
                     foreach (var item in getCustomer)
                     {
                         CustomerList.Add(new CustomerCount() { Password = item.Password, Customer = item.Customer });
                     }
-                }
+                
             }
             if (submitOrder != null)
             {
-                using (var db = new MenuDBContext())
-                {
+               
                     //Add db.MenuCustomerOrder to CustomerOrder.SendToKitchenList
-                    var selectOrder = from x in db.MenuCustomerOrder
+                    var selectOrder = from x in _context.MenuCustomerOrder
                                       where x.Password == decodedPassword
                                       select x;
 
@@ -271,19 +258,19 @@ namespace SimpleHound.Controllers
                         CustomerOrder.SendTokitchenList.Add(new MenuKitchenOrder { UserName = item.UserName, EmployeeName = item.EmployeeName, Customer = item.Customer, TableNum = item.TableNum, Category = item.Category, FoodItem = item.FoodItem, Price = item.Price, Note = item.Note, Quantity = item.Quantity, Password = item.Password });
                     }
 
-                    //clear db.MenuCustomerOrder Database
-                    db.MenuCustomerOrder.RemoveRange(db.MenuCustomerOrder.Where(x => x.Password == decodedPassword));
-                    //clear db.CustomerCount Database
-                    db.CustomerCount.RemoveRange(db.CustomerCount.Where(x => x.Password == decodedPassword));
+                //clear db.MenuCustomerOrder Database
+                _context.MenuCustomerOrder.RemoveRange(_context.MenuCustomerOrder.Where(x => x.Password == decodedPassword));
+                //clear db.CustomerCount Database
+                _context.CustomerCount.RemoveRange(_context.CustomerCount.Where(x => x.Password == decodedPassword));
 
-                    //Add CustomerOrder.SendToKitchenList to db.MenuKitchen
-                    //The kitchen side will retriave from db.MenuKitchen 
-                    db.MenuKitchen.AddRange(
+                //Add CustomerOrder.SendToKitchenList to db.MenuKitchen
+                //The kitchen side will retriave from db.MenuKitchen 
+                _context.MenuKitchen.AddRange(
                          CustomerOrder.SendTokitchenList
                          );
 
-                    db.SaveChanges();
-                }
+                _context.SaveChanges();
+                
                 CustomerOrder.SendTokitchenList.Clear();
                 CustomerList.Clear();
                 TotalCountHelper.Clear();
@@ -298,31 +285,30 @@ namespace SimpleHound.Controllers
             if (addCustomer != null)
             {
 
-                using (var db = new MenuDBContext())
-                {
-                    var customerQuery = db.CustomerCount.Where(x => x.Password == decodedPassword);
+               
+                    var customerQuery = _context.CustomerCount.Where(x => x.Password == decodedPassword);
 
-                    if(customerQuery.Count() == 0)
+                    if (customerQuery.Count() == 0)
                     {
                         TotalCountHelper.Add(1);
-                        db.CustomerCount.AddRange(new CustomerCount() { Customer = TotalCountHelper.Count(), Password = decodedPassword });                        
+                    _context.CustomerCount.AddRange(new CustomerCount() { Customer = TotalCountHelper.Count(), Password = decodedPassword });
                     }
                     else
                     {
                         TotalCountHelper.Add(1);
-                        db.CustomerCount.AddRange(new CustomerCount() { Customer = TotalCountHelper.Count(), Password = decodedPassword });
+                    _context.CustomerCount.AddRange(new CustomerCount() { Customer = TotalCountHelper.Count(), Password = decodedPassword });
                     }
 
-                    db.SaveChanges();
+                _context.SaveChanges();
 
-                  
+
                     CustomerList.Clear();
-                    var getCustomer = db.CustomerCount.Where(x => x.Password == decodedPassword);
+                    var getCustomer = _context.CustomerCount.Where(x => x.Password == decodedPassword);
                     foreach (var item in getCustomer)
                     {
-                        CustomerList.Add(new CustomerCount() {Password = item.Password, Customer = item.Customer });
+                        CustomerList.Add(new CustomerCount() { Password = item.Password, Customer = item.Customer });
                     }
-                }
+                
             }
 
             return View(CustomerList);
@@ -340,11 +326,10 @@ namespace SimpleHound.Controllers
             ViewData["tabelNumber"] = table;
 
             //Depending on what customer number is clicked, the database items will be retrieved             
-            using (var db = new MenuDBContext())
-            {
+           
                 CustomerOrder.CustomerFoodList.Clear();
 
-                var databaseFood = db.MenuCustomerOrder.Where(x => x.Password == decodedPassword && x.Customer == id);
+                var databaseFood = _context.MenuCustomerOrder.Where(x => x.Password == decodedPassword && x.Customer == id);
 
                 foreach (var item in databaseFood)
                 {
@@ -363,16 +348,15 @@ namespace SimpleHound.Controllers
                         Password = item.Password
                     });
                 }
-            }
+            
 
             //Retrieve this restaurants categories
             CustomerOrder.CategoryList.Clear();
 
-            using (var db = new MenuDBContext())
-            {
+            
 
-                var getCategories = (from a in db.MenuEntry
-                                     join b in db.MenuEmployees
+                var getCategories = (from a in _context.MenuEntry
+                                     join b in _context.MenuEmployees
                                      on a.UserName equals b.UserName
                                      select new
                                      {
@@ -388,7 +372,7 @@ namespace SimpleHound.Controllers
                                  .Select(x => x.Categories).Distinct();
 
                 CustomerOrder.CategoryList.AddRange(getCategories);
-            };
+            
 
             return View(CustomerOrder);
         }
@@ -413,16 +397,15 @@ namespace SimpleHound.Controllers
 
             if (backButton == "pressed")
             {
-                using (var db = new MenuDBContext())
-                {
-                    db.MenuCustomerOrder.RemoveRange(db.MenuCustomerOrder.Where(x => x.Password == decodedPassword && x.Customer == customerNum));
 
-                    db.MenuCustomerOrder.AddRange(
+                _context.MenuCustomerOrder.RemoveRange(_context.MenuCustomerOrder.Where(x => x.Password == decodedPassword && x.Customer == customerNum));
+
+                _context.MenuCustomerOrder.AddRange(
                         CustomerOrder.CustomerFoodList
                         );
 
-                    db.SaveChanges();
-                }
+                _context.SaveChanges();
+                
 
                 CustomerOrder.CustomerFoodList.Clear();
                 CustomerOrder.WaiterItemEntryList.Clear();
@@ -435,10 +418,9 @@ namespace SimpleHound.Controllers
                 if (categorySelected != null)
                 {
                     CustomerOrder.WaiterItemEntryList.Clear();
-                    using (var db = new MenuDBContext())
-                    {
-                        var joinQuery = (from a in db.MenuEntry
-                                         join b in db.MenuEmployees
+                   
+                        var joinQuery = (from a in _context.MenuEntry
+                                         join b in _context.MenuEmployees
                                          on a.UserName equals b.UserName
                                          select new
                                          {
@@ -458,7 +440,7 @@ namespace SimpleHound.Controllers
                             ViewData["seclectedCategory"] = item.Categories;
                         }
 
-                    }
+                    
 
                 }
                 if (foodItemSelected != null)

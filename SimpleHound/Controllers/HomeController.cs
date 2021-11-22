@@ -16,6 +16,12 @@ namespace SimpleHound.Controllers
 
     public class HomeController : Controller
     {
+        private readonly MenuDBContext _context;
+
+        public HomeController(MenuDBContext context)
+        {
+            _context = context;
+        }
 
         public static FoodLists FoodLists = new FoodLists();
 
@@ -25,9 +31,8 @@ namespace SimpleHound.Controllers
         {
             //If this user has menu items in databse, direct user to Dashboard page
             //All new users are sent to MenuTableEntry page
-            using (var db = new MenuDBContext())
-            {
-                var containsUser = db.MenuEntry.Where(x => x.UserName == User.Identity.Name).ToList();
+           
+                var containsUser = _context.MenuEntry.Where(x => x.UserName == User.Identity.Name).ToList();
 
                 if (containsUser.Count > 0)
                 {
@@ -39,7 +44,7 @@ namespace SimpleHound.Controllers
                 }
 
                 return View();
-            }
+            
         }
 
         //------------------------------------------ Table Entry --------------------------------------
@@ -48,9 +53,8 @@ namespace SimpleHound.Controllers
         public IActionResult MenuTableEntry()
         {
             //If the users login info already exists in the database, direct user to Dashboard page
-            using (var db = new MenuDBContext())
-            {
-                var containsUser = db.MenuEntry.Where(x => x.UserName == User.Identity.Name).ToList();
+           
+                var containsUser = _context.MenuEntry.Where(x => x.UserName == User.Identity.Name).ToList();
 
                 if (containsUser.Count > 0)
                 {
@@ -58,7 +62,7 @@ namespace SimpleHound.Controllers
                 }
 
                 return View();
-            }
+            
         }
 
         [HttpPost]
@@ -83,19 +87,17 @@ namespace SimpleHound.Controllers
             ViewData["tableNum"] = id;
 
 
-            using (var db = new MenuDBContext())
-            {
+          
                 FoodLists.FoodItemList.Clear();
                 FoodLists.CategoryList.Clear();
 
                 //When existing user logs in, the menu information will be retrieved
 
-                var containsUser = db.MenuEntry.Where(x => x.UserName == User.Identity.Name);
+                var containsUser = _context.MenuEntry.Where(x => x.UserName == User.Identity.Name);
 
                 //adds food items to two lists
                 FoodLists = Helper.AddCategoryandFoodItems(containsUser, FoodLists);
                
-            }
             //deletes any duplicate categories and adds the new list with no repeating categories
 
             List<string> distinctCategory = FoodLists.CategoryList.Distinct().ToList();
@@ -154,12 +156,11 @@ namespace SimpleHound.Controllers
                         int tableNum = id;
                         if (tableNum == 0)
                         {
-                            using (var db = new MenuDBContext())
-                            {
-                                var fixZero = db.MenuEntry.Where(x => x.UserName == User.Identity.Name);
+                           
+                                var fixZero = _context.MenuEntry.Where(x => x.UserName == User.Identity.Name);
 
                                tableNum = Helper.RetreaveDatabaseTableNum(fixZero, tableNum);                              
-                            }
+                            
                         }
                         if (foodItemError == "")
                         {
@@ -179,17 +180,16 @@ namespace SimpleHound.Controllers
                         }
                         else
                         {
-                            using (var db = new MenuDBContext())
-                            {
+                           
                                 //delete existing database info
-                                db.MenuEntry.RemoveRange(db.MenuEntry.Where(x => x.UserName == User.Identity.Name));
+                                _context.MenuEntry.RemoveRange(_context.MenuEntry.Where(x => x.UserName == User.Identity.Name));
 
                                 //Add updated list to database
-                                db.MenuEntry.AddRange(
+                                _context.MenuEntry.AddRange(
                                     FoodLists.FoodItemList
                                     );
-                                db.SaveChanges();
-                            }
+                                _context.SaveChanges();
+                            
                             return RedirectToAction("HomeDashboard", "Dashboard");
                         }
 

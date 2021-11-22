@@ -36,11 +36,14 @@ namespace SimpleHound
                 options.MinimumSameSitePolicy = SameSiteMode.None;
 
             });
+            //Connection for all models
+            services.AddDbContext<MenuDBContext>(options =>
+              options.UseSqlServer(Configuration["SecretConnection:SQLConnection"]));
 
-
+            //Identity connection
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(
-                    Configuration.GetConnectionString("DefaultConnection")));
+               options.UseSqlServer(Configuration["SecretConnection:SQLConnection"]));
+
             services.AddDefaultIdentity<IdentityUser>()
                 .AddDefaultUI(UIFramework.Bootstrap4)
                 .AddEntityFrameworkStores<ApplicationDbContext>();

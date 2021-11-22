@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SimpleHound.SQLDatabase;
 
 namespace SimpleHound.Controllers
@@ -10,6 +11,12 @@ namespace SimpleHound.Controllers
 
     public class DashboardController : Controller
     {
+        private readonly MenuDBContext _context;
+
+        public DashboardController(MenuDBContext context)
+        {
+          _context = context;
+        }
 
         public static List<MenuEmployees> EmployeeList = new List<MenuEmployees>();
 
@@ -26,15 +33,14 @@ namespace SimpleHound.Controllers
         public IActionResult AddEmployees()
         {
            
-            using (var db = new MenuDBContext())
-            {
+           
                EmployeeList.Clear();
-                var contentUser = db.MenuEmployees.Where(x => x.UserName == User.Identity.Name);
+                var contentUser = _context.MenuEmployees.Where(x => x.UserName == User.Identity.Name);
                 foreach (var item in contentUser)
                 {
                     EmployeeList.Add(new MenuEmployees { UserName = item.UserName, Position = item.Position, Name = item.Name, Password = item.Password });
                 }
-            }
+            
 
             return View(EmployeeList);
         }
@@ -54,12 +60,11 @@ namespace SimpleHound.Controllers
                 {
                     int.TryParse(DeleteItem, out int deleteNum);
 
-                    using (var db = new MenuDBContext())
-                    {
-                        db.MenuEmployees.RemoveRange(db.MenuEmployees.Where(x => x.Password == EmployeeList[deleteNum].Password));
+                   
+                        _context.MenuEmployees.RemoveRange(_context.MenuEmployees.Where(x => x.Password == EmployeeList[deleteNum].Password));
 
-                        db.SaveChanges();
-                    }
+                        _context.SaveChanges();
+                    
 
                     EmployeeList.RemoveAt(deleteNum);
                 }
@@ -74,13 +79,12 @@ namespace SimpleHound.Controllers
                     EmployeeList.Insert(0, theEmployee);
 
 
-                    using (var db = new MenuDBContext())
-                    {
-                        db.MenuEmployees.Add(
+                  
+                        _context.MenuEmployees.Add(
                             theEmployee);
 
-                        db.SaveChanges();
-                    }
+                        _context.SaveChanges();
+                    
 
                 }
             }

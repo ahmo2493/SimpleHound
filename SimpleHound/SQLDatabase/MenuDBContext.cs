@@ -15,9 +15,9 @@ namespace SimpleHound.SQLDatabase
         public DbSet<MenuKitchenOrder> MenuKitchen { get; set; }
         public DbSet<CustomerCount> CustomerCount { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        public MenuDBContext(DbContextOptions<MenuDBContext> options)
+            : base(options)
         {
-            optionsBuilder.UseSqlServer(@"Server=tcp:amolearnserver.database.windows.net,1433;Initial Catalog=amoLearnDatabase;Persist Security Info=False;User ID=ahmo2493;Password=Spiodic555;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
         }
     }
 }
