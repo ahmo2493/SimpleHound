@@ -38,11 +38,11 @@ namespace SimpleHound
             });
             //Connection for all models
             services.AddDbContext<MenuDBContext>(options =>
-              options.UseSqlServer(Configuration["SecretConnection:SQLConnection"]));
+            options.UseSqlServer(Configuration["ConnectionStrings:DefaultConnection"]));
 
             //Identity connection
             services.AddDbContext<ApplicationDbContext>(options =>
-               options.UseSqlServer(Configuration["SecretConnection:SQLConnection"]));
+               options.UseSqlServer(Configuration["ConnectionStrings:DefaultConnection"]));
 
             services.AddDefaultIdentity<IdentityUser>()
                 .AddDefaultUI(UIFramework.Bootstrap4)
